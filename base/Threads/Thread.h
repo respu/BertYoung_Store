@@ -84,7 +84,7 @@ private:
     static bool  _LaunchThread(THREAD_HANDLE& handle, PTHREADFUNC func, void* arg);
 
 public:    
-    void   StopMe();
+    void   StopAndWait();
     void   Join();
     
     void   Suspend();

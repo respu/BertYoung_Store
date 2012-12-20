@@ -1,5 +1,5 @@
-#ifndef BERT_PPClient_H
-#define BERT_PPSERVER_H
+#ifndef BERT_PPCLIENT_H
+#define BERT_PPCLIENT_H
 
 #include "../../base/Server.h"
 

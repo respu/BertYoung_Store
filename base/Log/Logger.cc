@@ -621,8 +621,7 @@ bool LogManager::StartLog()
 
 void LogManager::StopLog()
 {
-    m_logThread.StopMe();
-    m_logThread.Join();
+    m_logThread.StopAndWait();
 }
 
 bool LogManager::Update()

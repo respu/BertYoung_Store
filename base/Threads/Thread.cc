@@ -116,13 +116,16 @@ void Thread::_Run()
     }
 }
 
-void Thread::StopMe()
+void Thread::StopAndWait()
 {
     m_working = false;
     if (m_runnable)
     {
         m_runnable->Stop();
     }
+
+    Resume();
+    Join();
 }
 
 void Thread::Join()

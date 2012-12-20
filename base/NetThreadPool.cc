@@ -260,14 +260,11 @@ void NetThread::Run( )
             m_newCnt = 0;
             m_mutex.Unlock();
 
-            if (!tmp_tasks.empty())
-            {
-                iter = tmp_tasks.begin();    
-                end  = tmp_tasks.end();
+			iter = tmp_tasks.begin();    
+			end  = tmp_tasks.end();
 
-                for (; iter != end; ++ iter)                
-                    _AddSocket(iter->first, iter->second);
-            }
+			for (; iter != end; ++ iter)                
+				_AddSocket(iter->first, iter->second);
         }
 
         for (it = m_tasks.begin(); it != m_tasks.end(); )

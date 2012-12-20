@@ -75,9 +75,7 @@ void ThreadPool::StopAllThreads()
     ThreadIterator it = tmpSet.begin();
     while (it != tmpSet.end())
     {
-        (*it)->StopMe();
-        (*it)->Resume();
-        (*it)->Join();
+        (*it)->StopAndWait();
         delete *it;
         ++ it;        
     }
@@ -88,3 +86,4 @@ int  ThreadPool::Size()
     ScopeMutex  guard(m_threadsLock);
     return  static_cast<int>(m_threads.size()); 
 }
+

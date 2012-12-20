@@ -29,9 +29,7 @@ bool Server::_StartListen()
 
 void Server::_StopListen()
 {
-    m_thread.StopMe();
-    m_thread.Resume();
-    m_thread.Join();
+    m_thread.StopAndWait();
 }
 #endif
 
