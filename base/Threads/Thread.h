@@ -94,9 +94,7 @@ public:
     static void        YieldCPU();
 
 private:
-    Thread(const Thread& );
-
-    Thread& operator= (const Thread& );
+    NONCOPYABLE(Thread);
 };
 
 

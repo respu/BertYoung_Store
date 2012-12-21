@@ -29,7 +29,8 @@ public:
         logSocket   = 0x01 << 3,  // TODO : LOG SERVER
     };
 
-    Logger();
+	friend class LogManager;
+
     ~Logger();
     bool Init(unsigned int level = logDEBUG,
         unsigned int dest = logConsole,
@@ -63,6 +64,8 @@ public:
 
 private:
     NONCOPYABLE(Logger);
+
+    Logger();
 
     static const int MAXLINE_LOG = 2048;
     char            m_tmpBuffer[MAXLINE_LOG];
