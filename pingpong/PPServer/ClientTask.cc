@@ -1,6 +1,26 @@
 #include "ClientTask.h"
+#include "../../base/Log/Logger.h"
+#include "PPServer.h"
 
-bool ClientTask::_HandlePacket(AttachedBuffer& buf)
+HEAD_LENGTH_T ClientTask::_HandleHead(AttachedBuffer& buf, BODY_LENGTH_T* bodyLen)
 {
-    return SendPacket(buf);
+    if (buf.SizeForRead() >= sizeof(*bodyLen))
+    {
+        buf >> *bodyLen;
+        return sizeof(*bodyLen);
+    }
+
+    return 0;
 }
+
+void ClientTask::_HandlePacket(AttachedBuffer& buf)
+{
+    WRN(SERVER->Log()) << "Recv " << buf.ReadAddr();
+
+    StackBuffer  cmd;
+    cmd << buf.SizeForRead();
+    cmd.PushData(buf.ReadAddr(), buf.SizeForRead());
+
+    SendPacket(cmd);
+}
+

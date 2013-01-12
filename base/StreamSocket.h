@@ -12,6 +12,8 @@
 
 #endif
 
+typedef int32_t  HEAD_LENGTH_T;
+typedef int32_t  BODY_LENGTH_T;
 
 // Abstraction for a TCP connection
 class StreamSocket : public Socket
@@ -38,7 +40,6 @@ public:
 
     bool       Init(SOCKET localfd, int localport, int peerport);
     SOCKTYPE   GetSocketType() const { return STREAMSOCKET; }
-    typedef    int32_t  LENGTH_T;
 
 public:
     // Receive data
@@ -66,8 +67,9 @@ private:
     int    _Send(const BufferSequence& buffers);
     bool   _SendFully(BufferSequence& buffers);
     bool   _FinalSync();
-    virtual bool _HandlePacket(AttachedBuffer& buf) { return false; }
-    LENGTH_T  m_currentPacketLen;
+    virtual HEAD_LENGTH_T _HandleHead(AttachedBuffer& buf, BODY_LENGTH_T* bodyLen) = 0;
+    virtual void _HandlePacket(AttachedBuffer& buf) = 0;
+    BODY_LENGTH_T m_bodyLen;
 
 #if defined(__gnu_linux__)
     bool   m_bShouldEpollOut;

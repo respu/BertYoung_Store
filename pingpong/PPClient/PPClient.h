@@ -22,6 +22,6 @@ private:
     Logger* m_pLog;
 };
 
-#define SERVER static_cast<PPClient* >(TCPServer::Instance())
+#define SERVER static_cast<PPClient* >(Server::Instance())
 
 #endif

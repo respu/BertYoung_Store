@@ -139,7 +139,7 @@ StreamSocket::StreamSocket()
     m_ovRecv.m_event = IO_RECV;
     m_ovRecv.m_pSocket = this;
 #endif
-    m_currentPacketLen = 0;
+    m_bodyLen = 0;
 }
 
 StreamSocket::~StreamSocket()
@@ -381,16 +381,8 @@ bool StreamSocket::SendPacket(const char* pData, int nBytes)
         return true;
     }
 
-    if (nBytes >= m_sendBuf.SizeForWrite())
+    if (m_sendBuf.PushData(pData, nBytes))
     {
-        return true;
-    }
-
-    LENGTH_T   nBodyLen = static_cast<LENGTH_T>(nBytes);
-    if (m_sendBuf.PushDataAt(&nBodyLen, sizeof nBodyLen) &&
-        m_sendBuf.PushDataAt(pData, nBodyLen, sizeof nBodyLen))
-    {
-        m_sendBuf.AdjustWritePtr(nBodyLen + sizeof nBodyLen);
         return true;
     }
     else
@@ -559,28 +551,37 @@ bool StreamSocket::Send()
 bool StreamSocket::DoMsgParse()
 {
     bool busy = false;
-    while (m_recvBuf.SizeForRead() > static_cast<int>(sizeof m_currentPacketLen))
+    while (!m_recvBuf.IsEmpty())
     {
-        if (0 == m_currentPacketLen)
+        AttachedBuffer af(m_recvBuf.ReadAddr(), m_recvBuf.SizeForRead());
+
+        if (0 == m_bodyLen)
         {
-            if (!m_recvBuf.PeekDataAt(&m_currentPacketLen, sizeof m_currentPacketLen))
+            const HEAD_LENGTH_T headLen = _HandleHead(af, &m_bodyLen);
+            if (headLen < 0 || headLen + 1 >= m_recvBuf.Capacity())
             {
-                return  busy;
+                OnError();
+                return false;
             }
-            m_recvBuf.AdjustReadPtr(sizeof m_currentPacketLen);
+            else
+            {
+                m_recvBuf.AdjustReadPtr(headLen);
+            }
         }
 
         // some defensive code
-        if (3 * m_currentPacketLen > 2 * m_recvBuf.Capacity())
+        if (m_bodyLen < 0 ||
+            3 * m_bodyLen > 2 * m_recvBuf.Capacity())
         {
             LOCK_SDK_LOG
-            DEBUG_SDK << "Too big packet " << m_currentPacketLen << " on socket " << m_localSock;
+            DEBUG_SDK << "Too big packet " << m_bodyLen << " on socket " << m_localSock;
             UNLOCK_SDK_LOG
             OnError();
-            return busy;
+            return  false;
         }
         
-        if (m_recvBuf.SizeForRead() < m_currentPacketLen)
+        if (0 == m_bodyLen ||
+            m_recvBuf.SizeForRead() < m_bodyLen)
         {
             return busy;
         }
@@ -588,15 +589,14 @@ bool StreamSocket::DoMsgParse()
         busy = true;
 
         BufferSequence   bf;
-        m_recvBuf.GetDatum(bf, m_currentPacketLen); 
-
-        assert (m_currentPacketLen == bf.TotalBytes());
+        m_recvBuf.GetDatum(bf, m_bodyLen); 
+        assert (m_bodyLen == bf.TotalBytes());
 
         AttachedBuffer   cmd(bf);
         _HandlePacket(cmd);
 
-        m_recvBuf.AdjustReadPtr(m_currentPacketLen);
-        m_currentPacketLen = 0;
+        m_recvBuf.AdjustReadPtr(m_bodyLen);
+        m_bodyLen = 0;
     }
 
     return  busy;

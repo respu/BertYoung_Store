@@ -31,7 +31,6 @@ public:
 
 	friend class LogManager;
 
-    ~Logger();
     bool Init(unsigned int level = logDEBUG,
         unsigned int dest = logConsole,
         const char* pDir  = 0);
@@ -66,6 +65,7 @@ private:
     NONCOPYABLE(Logger);
 
     Logger();
+   ~Logger();
 
     static const int MAXLINE_LOG = 2048;
     char            m_tmpBuffer[MAXLINE_LOG];

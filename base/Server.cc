@@ -44,7 +44,7 @@ Server::Server() : m_bTerminate(false)
 #endif
 
 #ifdef  DEBUG_BERT_SDK
-    g_sdkLog = LogManager::Instance().CreateLog(Logger::logDEBUG, Logger::logFILE, "./sdk_debug_log");
+    g_sdkLog = LogManager::Instance().CreateLog(Logger::logDEBUG, Logger::logALL, "./sdk_debug_log");
     LOCK_SDK_LOG;
     DEBUG_SDK << "Create g_sdk Log!";
     UNLOCK_SDK_LOG;

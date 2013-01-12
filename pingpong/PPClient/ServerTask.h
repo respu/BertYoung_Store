@@ -9,7 +9,8 @@ public:
     bool SendMsg();
 
 private:
-    bool _HandlePacket(AttachedBuffer& buf);
+    HEAD_LENGTH_T  _HandleHead(AttachedBuffer& buf, BODY_LENGTH_T* bodyLen);
+    void _HandlePacket(AttachedBuffer& buf);
 };
 
 #endif
