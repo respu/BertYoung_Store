@@ -553,7 +553,10 @@ bool StreamSocket::DoMsgParse()
     bool busy = false;
     while (!m_recvBuf.IsEmpty())
     {
-        AttachedBuffer af(m_recvBuf.ReadAddr(), m_recvBuf.SizeForRead());
+		BufferSequence  datum;
+		m_recvBuf.GetDatum(datum);
+
+        AttachedBuffer af(datum);
 
         if (0 == m_bodyLen)
         {
