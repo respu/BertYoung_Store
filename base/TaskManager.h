@@ -4,6 +4,7 @@
 #include <vector>
 #include "./Threads/IPC.h"
 #include "EntryManager.h"
+#include "StreamSocket.h"
 
 /* old code need mutex, because net thread find tcp disconnect,
  * it will delete the tcp pointer here
@@ -15,10 +16,8 @@
 
 class StreamSocket;
 
-template <typename T>
-class CircularBuffer;
-
-typedef CircularBuffer<char [16 * 1024]> StackBuffer;
+template <int N>
+class StackBuffer;
 
 class TaskManager : public EntryManager<StreamSocket>
 {
@@ -57,18 +56,85 @@ public:
     unsigned int GetSize() const {   return Size();    }
 
     // Broadcast msg to all tasks
-    bool Broadcast(StackBuffer& cmd);
+    template <int N>
+    bool Broadcast(StackBuffer<N>& cmd);
 
     // send msg to only one
-    bool SendToID(StackBuffer& cmd, unsigned int id);
+    template <int N>
+    bool SendToID(StackBuffer<N>& cmd, unsigned int id);
 
     // Broadcast msg to all tasks
-    bool BroadcastExceptID(StackBuffer& cmd, unsigned int id);
+    template <int N>
+    bool BroadcastExceptID(StackBuffer<N>& cmd, unsigned int id);
 
     //  逻辑线程解析每一条连接收到的消息
     bool DoMsgParse();
 
 };
+
+template <int N>
+inline bool TaskManager::Broadcast(StackBuffer<N>& cmd)
+{
+    struct Broadcast : public Callback<StreamSocket>
+    {
+    private:
+        StackBuffer<N>& cmd;
+
+    public:
+        Broadcast(StackBuffer<N> & rcmd) : cmd(rcmd)
+        {
+        }
+
+        bool Exec(SharedPtr<StreamSocket> pSock)
+        {
+            if (!pSock.Get() || pSock->Invalid())
+                return false;
+
+            return pSock->SendPacket(cmd);
+        }
+    } sendToAll(cmd);
+
+    ExecEveryTask(sendToAll);
+    return true;
+}
+
+
+template <int N>
+inline bool TaskManager::SendToID(StackBuffer<N>& cmd, unsigned int id)
+{
+    SharedPtr<StreamSocket> pSock = GetEntry(id);
+
+    if (!pSock.Get() || pSock->Invalid())
+        return false;
+
+    return pSock->SendPacket(cmd);
+}
+
+template <int N>
+inline bool TaskManager::BroadcastExceptID(StackBuffer<N>& cmd, unsigned int id)
+{
+    struct Broadcast : public Callback<StreamSocket>
+    {
+        StackBuffer<N>& cmd;
+        unsigned int    id;
+
+        Broadcast(StackBuffer<N>& rcmd, unsigned int i) : cmd(rcmd), id(i)
+        {
+        }
+        
+        bool Exec(SharedPtr<StreamSocket> pSock)
+        {
+            if (pSock.Get() && pSock->id != id)
+                pSock->SendPacket(cmd);
+            
+            return true;
+        }
+    } sendAllButOne(cmd, id);
+
+    ExecEveryTask(sendAllButOne);
+    return true;
+}
+    
 
 #endif
 

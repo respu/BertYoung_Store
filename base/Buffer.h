@@ -156,7 +156,12 @@ class  CircularBuffer
 {
 public:
     // Constructor  to be specialized
-    explicit CircularBuffer(int maxSize = DEFAULT_BUFFER_SIZE);
+    explicit CircularBuffer(int maxSize = DEFAULT_BUFFER_SIZE) : m_maxSize(maxSize),
+    m_readPos(0),
+    m_writePos(0),
+    m_owned(false)
+    {
+    }
     CircularBuffer(const BufferSequence& bf);
     CircularBuffer(char* , int );
    ~CircularBuffer() { }
@@ -239,7 +244,7 @@ public:
     CircularBuffer & operator<< (const std::string& str);
     CircularBuffer & operator>> (std::string& str);
 
-private:
+protected:
     // The max capacity of m_buffer
     int m_maxSize;
 
@@ -763,14 +768,24 @@ inline Buffer::CircularBuffer(int maxSize) : m_maxSize(RoundUp2Power(maxSize)), 
 
 
 
-typedef CircularBuffer<char [16 * 1024]> StackBuffer;
-
-template <>
-inline StackBuffer::CircularBuffer(int dummyMaxSize) : m_maxSize(8 * 1024), m_readPos(0), m_writePos(0)
+template <int N>
+class StackBuffer : public CircularBuffer<char [N]>
 {
-    assert (0 == (m_maxSize & (m_maxSize - 1)) && "m_maxSize MUST BE power of 2");
-}
+    using CircularBuffer<char [N]>::m_maxSize;
 
+public:
+    StackBuffer()
+    {
+        m_maxSize = N;
+        if (m_maxSize < 0)
+            m_maxSize = 1;
+
+        if (0 != (m_maxSize & (m_maxSize - 1)))
+            m_maxSize = RoundUp2Power(m_maxSize);
+
+        assert (0 == (m_maxSize & (m_maxSize - 1)) && "m_maxSize MUST BE power of 2");
+    }
+};
 
 //////////////////////////////////////////////////////////////////////////
 typedef CircularBuffer<char* > AttachedBuffer;

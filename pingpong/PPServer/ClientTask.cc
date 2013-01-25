@@ -17,7 +17,7 @@ void ClientTask::_HandlePacket(AttachedBuffer& buf)
 {
     WRN(SERVER->Log()) << "Recv " << buf.ReadAddr();
 
-    StackBuffer  cmd;
+    StackBuffer<2 * 1024>  cmd;
     cmd << buf.SizeForRead();
     cmd.PushData(buf.ReadAddr(), buf.SizeForRead());
 

@@ -48,8 +48,9 @@ public:
     // Send data
     bool   SendPacket(const char* pData, int nBytes);
     bool   SendPacket(Buffer&  bf);
-    bool   SendPacket(StackBuffer&  sbf);
     bool   SendPacket(AttachedBuffer& abf);
+    template <int N>
+    bool   SendPacket(StackBuffer<N>&  sbf);
 
     bool   OnReadable();
     bool   OnWritable();
@@ -90,6 +91,13 @@ protected:
     Buffer   m_recvBuf;
     Buffer   m_sendBuf;
 };
+
+template <int N>
+inline bool  StreamSocket::SendPacket(StackBuffer<N>& sf)
+{
+    return  SendPacket(sf.ReadAddr(), sf.SizeForRead());
+}
+
 
 
 #endif

@@ -402,11 +402,6 @@ bool  StreamSocket::SendPacket(Buffer& bf)
 }
 
 
-bool  StreamSocket::SendPacket(StackBuffer& sf)
-{
-    return  SendPacket(sf.ReadAddr(), sf.SizeForRead());
-}
-
 
 bool  StreamSocket::SendPacket(AttachedBuffer& af)
 {

@@ -1,5 +1,4 @@
 #include "TaskManager.h"
-#include "StreamSocket.h"
 
 
 TaskManager::~TaskManager()
@@ -36,67 +35,6 @@ bool TaskManager::RemoveTask(SharedPtr<StreamSocket> task )
 }
 
 
-bool TaskManager::Broadcast(StackBuffer& cmd)
-{
-    struct Broadcast : public Callback<StreamSocket>
-    {
-    private:
-        StackBuffer& cmd;
-
-    public:
-        Broadcast(StackBuffer& rcmd) : cmd(rcmd)
-        {
-        }
-
-        bool Exec(SharedPtr<StreamSocket> pSock)
-        {
-            if (!pSock.Get() || pSock->Invalid())
-                return false;
-
-            return pSock->SendPacket(cmd);
-        }
-    } sendToAll(cmd);
-
-    ExecEveryTask(sendToAll);
-    return true;
-}
-
-
-bool TaskManager::SendToID(StackBuffer& cmd, unsigned int id)
-{
-    SharedPtr<StreamSocket> pSock = GetEntry(id);
-
-    if (!pSock.Get() || pSock->Invalid())
-        return false;
-
-    return pSock->SendPacket(cmd);
-}
-
-
-bool TaskManager::BroadcastExceptID(StackBuffer& cmd, unsigned int id)
-{
-    struct Broadcast : public Callback<StreamSocket>
-    {
-        StackBuffer&    cmd;
-        unsigned int    id;
-
-        Broadcast(StackBuffer& rcmd, unsigned int i) : cmd(rcmd), id(i)
-        {
-        }
-        
-        bool Exec(SharedPtr<StreamSocket> pSock)
-        {
-            if (pSock.Get() && pSock->id != id)
-                pSock->SendPacket(cmd);
-            
-            return true;
-        }
-    } sendAllButOne(cmd, id);
-
-    ExecEveryTask(sendAllButOne);
-    return true;
-}
-    
 bool TaskManager::DoMsgParse()
 {
     struct DoCmd : public Callback<StreamSocket>
