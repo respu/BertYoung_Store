@@ -90,6 +90,12 @@ protected:
     
     Buffer   m_recvBuf;
     Buffer   m_sendBuf;
+    struct Msg {
+        int   len;
+        const char* msg;
+    };
+
+    std::list<Msg> m_sendList;
 };
 
 template <int N>

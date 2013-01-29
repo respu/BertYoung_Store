@@ -381,18 +381,35 @@ bool StreamSocket::SendPacket(const char* pData, int nBytes)
         return true;
     }
 
-    if (m_sendBuf.PushData(pData, nBytes))
+    while (!m_sendList.empty())
     {
-        return true;
+        Msg &msg = m_sendList.front();
+        if (!m_sendBuf.PushData(msg.msg, msg.len))
+        {
+            Msg tmp;
+            tmp.len = nBytes;
+            tmp.msg = pData;
+            m_sendList.push_back(tmp);
+            return true;
+        }
+
+        m_sendList.pop_front();
     }
-    else
+
+    if (!m_sendBuf.PushData(pData, nBytes))
     {
         LOCK_SDK_LOG
         DEBUG_SDK << "Can not send packet because send buffer overflow, bytes = " << nBytes
                   << ", but send buf only has space " << m_sendBuf.SizeForWrite();
         UNLOCK_SDK_LOG
-        return false;
+
+        Msg tmp;
+        tmp.len = nBytes;
+        tmp.msg = pData;
+        m_sendList.push_back(tmp);
     }
+        
+    return true;
 }
 
 
