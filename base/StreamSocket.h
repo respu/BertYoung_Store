@@ -92,7 +92,21 @@ protected:
     Buffer   m_sendBuf;
     struct Msg {
         int   len;
-        const char* msg;
+        char* msg;
+
+        explicit Msg(int n = 0, const char* p = 0) : len(n), msg(0)
+        {
+            if (p && n)
+            {
+                msg = new char[n];
+                memcpy(msg, p, n);
+            }
+        }
+
+       ~Msg()
+       {
+           delete [] msg;
+       }
     };
 
     std::list<Msg> m_sendList;

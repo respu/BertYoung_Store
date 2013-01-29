@@ -386,9 +386,7 @@ bool StreamSocket::SendPacket(const char* pData, int nBytes)
         Msg &msg = m_sendList.front();
         if (!m_sendBuf.PushData(msg.msg, msg.len))
         {
-            Msg tmp;
-            tmp.len = nBytes;
-            tmp.msg = pData;
+            Msg tmp(nBytes, pData);
             m_sendList.push_back(tmp);
             return true;
         }
@@ -403,9 +401,7 @@ bool StreamSocket::SendPacket(const char* pData, int nBytes)
                   << ", but send buf only has space " << m_sendBuf.SizeForWrite();
         UNLOCK_SDK_LOG
 
-        Msg tmp;
-        tmp.len = nBytes;
-        tmp.msg = pData;
+        Msg tmp(nBytes, pData);
         m_sendList.push_back(tmp);
     }
         
