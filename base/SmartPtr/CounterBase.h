@@ -49,11 +49,17 @@ public:
 
     bool  AddShareCopy()
     {
-        if (0 == m_shareCnt)
-            return false;
+        while (true)
+        {
+            int oldCnt = m_shareCnt;
+            if (oldCnt == 0)
+                return false;
+        
+            if (oldCnt == AtomicTestAndSet(&m_shareCnt, oldCnt + 1, oldCnt))
+                return  true;
+        }
 
-        AddShareCnt();
-        return true;
+        return false;
     }
 
     void Destroy()

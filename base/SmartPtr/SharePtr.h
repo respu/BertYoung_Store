@@ -73,7 +73,7 @@ public:
         CounterBase* tmp = other.m_cnt;
         if (tmp)
         {
-            tmp->AddShareCopy();
+            tmp->AddShareCnt();
             m_cnt = tmp;
             m_ptr = static_cast<T* >(other.m_ptr);
         }
@@ -89,7 +89,7 @@ public:
         CounterBase* tmp = other.m_cnt;
         if (tmp)
         {
-            tmp->AddShareCopy();
+            tmp->AddShareCnt();
             m_cnt = tmp;
             m_ptr = other.m_ptr;
         }
@@ -103,9 +103,8 @@ public:
     SharedPtr(const WeakPtr<T>& other)
     {
         CounterBase* tmp = other.m_cnt;
-        if (tmp)
+        if (tmp && tmp->AddShareCopy())
         {
-            tmp->AddShareCopy();
             m_cnt = tmp;
             m_ptr = other.m_ptr;
         }
@@ -124,7 +123,7 @@ public:
         CounterBase* tmp = other.m_cnt;
         if (tmp)
         {
-            tmp->AddShareCopy();
+            tmp->AddShareCnt();
         }
 
         Reset();
