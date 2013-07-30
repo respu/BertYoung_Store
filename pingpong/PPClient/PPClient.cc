@@ -1,6 +1,7 @@
 #include "PPClient.h"
 #include "../../base/Log/Logger.h"
 #include "../../base/NetThreadPool.h"
+#include "../../base/ClientSocket.h"
 #include "ServerTask.h"
 #include "../../base/Timer.h"
 
@@ -39,37 +40,14 @@ bool PPClient::_Init()
 {
     m_pLog = LogManager::Instance().CreateLog(Logger::logALL, Logger::logALL);
 
-#if defined(__gnu_linux__)
-    if (!NetThreadPool::Instance().PrepareThreads(1))
-#else
-    if (!NetThreadPool::Instance().PrepareThreads(NetThread::GetNumOfCPU()))
-#endif
-    {
-        ERR(m_pLog) << "can not create threads";
-        return false;
-    }
-
-    if (!Server::_Connect("127.0.0.1", 8888))
+    SharedPtr<ClientSocket>     pClient(new ClientSocket);
+    if (!pClient->Connect("127.0.0.1", 8888))
     {
         ERR(m_pLog) << "can not connect server 8888";
         return false;
     }
 
-    if (!NetThreadPool::Instance().StartAllThreads())
-    {       
-        ERR(m_pLog) << "can not start threads";
-        return false;
-    }
-
-#if !defined(__gnu_linux__)
-    if (!Server::_StartListen())
-    {
-        return false;
-    }
-
-#endif
-
-    return  LogManager::Instance().StartLog();
+    return  true;
 }
 
 bool PPClient::_RunLogic()

@@ -36,33 +36,13 @@ bool PPServer::_Init()
 
     WRN(m_pLog) << "First PPServer log";
 
-#if defined(__gnu_linux__)
-    if (!NetThreadPool::Instance().PrepareThreads(1))
-#else
-    if (!NetThreadPool::Instance().PrepareThreads(NetThread::GetNumOfCPU()))
-#endif
-    {
-        ERR(m_pLog) << "can not create threads";
-        return false;
-    }
-
     if (!PPServer::_Bind(8888))
     {
         ERR(m_pLog) << "can not bind socket";
         return false;
     }
 
-    NetThreadPool::Instance().StartAllThreads();
-
-#if !defined(__gnu_linux__)
-    if (!Server::_StartListen())
-    {
-        return false;
-    }
-
-#endif
-
-    return  LogManager::Instance().StartLog();
+    return true;
 }
 
 

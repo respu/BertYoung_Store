@@ -1,19 +1,14 @@
 #ifndef BERT_COUNTERBASE_H
 #define BERT_COUNTERBASE_H
 
-#ifdef SMART_PTR
-#include <iostream>
-#endif
 #include "../Threads/Atomic.h"
+
 
 class CounterBase
 {
 public:
     CounterBase() : m_shareCnt(1), m_weakCnt(1)
     {
-#ifdef SMART_PTR
-        std::cout << __FUNCTION__ << std::endl;
-#endif
     }
 
     virtual ~CounterBase()
@@ -49,9 +44,12 @@ public:
 
     bool  AddShareCopy()
     {
+        // When a shared_ptr is construct from weakptr
+        // The weak ptr may be expired, so here is a infinite loop
+        // to make sure whether the weak ptr is valid;
         while (true)
         {
-            int oldCnt = m_shareCnt;
+            const int oldCnt = m_shareCnt;
             if (oldCnt == 0)
                 return false;
         
@@ -64,9 +62,6 @@ public:
 
     void Destroy()
     {        
-#ifdef SMART_PTR
-        std::cout << __FUNCTION__ << std::endl;
-#endif
         delete this;
     }
 

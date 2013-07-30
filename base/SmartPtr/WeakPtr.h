@@ -1,9 +1,6 @@
 #ifndef BERT_WEAKPTR_H
 #define BERT_WEAKPTR_H
 
-#ifdef SMART_PTR
-#include <iostream>
-#endif
 #include "./SharePtr.h"
 
 template <typename T>
@@ -20,10 +17,6 @@ public:
     {
         if (m_cnt)
             m_cnt->DecWeakCnt();
-
-#ifdef SMART_PTR
-        Print();
-#endif
     }
 
     template <typename U>
@@ -32,20 +25,9 @@ public:
         if (m_cnt)      m_cnt->AddWeakCnt();
     }
 
-    WeakPtr(const WeakPtr& other)
+    WeakPtr(const WeakPtr& other) : m_cnt(other.m_cnt), m_ptr(other.m_ptr)
     {
-        CounterBase* tmp = other.m_cnt;
-        if (tmp)
-        {
-            tmp->AddWeakCnt();
-            m_cnt = tmp;
-            m_ptr = other.m_ptr;
-        }
-        else
-        {
-            m_cnt = 0;
-            m_ptr = 0;
-        }
+        if (m_cnt)      m_cnt->AddWeakCnt();
     }
   
     WeakPtr& operator=(const WeakPtr& other)
@@ -53,14 +35,12 @@ public:
         if (this == &other)
             return *this;
 
-        CounterBase* tmp = other.m_cnt;
-        if (tmp)
-            tmp->AddWeakCnt();
-
         Reset();
 
-        m_cnt = tmp;
         m_ptr = other.m_ptr;
+        m_cnt = other.m_cnt;
+
+        if (m_cnt)      m_cnt->AddWeakCnt();
 
         return *this;
     }
@@ -94,6 +74,13 @@ public:
         return 0;
     }
 
+    int WeakCount() const
+    {
+        if (m_cnt)  return m_cnt->WeakCount();
+
+        return 0;
+    }
+
     bool Expired() const
     {
         return 0 == UseCount();
@@ -101,23 +88,8 @@ public:
 
     SharedPtr<T> Lock()
     {
-        if (Expired())
-            return SharedPtr<T>();
-
         return SharedPtr<T>(*this);
     }
-
-
-#ifdef SMART_PTR
-    void Print()
-    {     
-        std::cout << "========WEAK=======\n";
-        std::cout << "Weak  cnt " << (m_cnt ? m_cnt->WeakCount() : 0) << std::endl;
-        std::cout << "Share cnt " << (m_cnt ? m_cnt->UseCount() : 0) << std::endl;
-        std::cout << (m_ptr ? m_ptr : 0) << std::endl;
-        std::cout << "========WEAK=======\n";
-    }
-#endif
 
 private:
     CounterBase* m_cnt;

@@ -327,38 +327,37 @@ void NetThread::Run( )
         {
             Socket*    pSocket = (Socket* )m_events[i].data.ptr;
             
-            if (m_events[i].events & EPOLLERR)
+            LOCK_SDK_LOG
+            if ((m_events[i].events & EPOLLHUP) && !(m_events[i].events & EPOLLIN))
             {
-                LOCK_SDK_LOG
-                DEBUG_SDK << "error fd = " << pSocket->m_localSock << ", reason " << errno;
-                UNLOCK_SDK_LOG
+                DEBUG_SDK << "hup fd = " << pSocket->m_localSock << ", reason " << errno;
                 pSocket->OnError();
             }
-            else
+
+            if (m_events[i].events & EPOLLERR)
             {
-                if (m_events[i].events & EPOLLIN)
-                {
-                    if (!pSocket->OnReadable())
-                    {
-                        LOCK_SDK_LOG
-                        DEBUG_SDK << "error4 read. task fd = " << pSocket->m_localSock;
-                        UNLOCK_SDK_LOG
-                        pSocket->OnError();
-                    }
-                }
-                
-                if (m_events[i].events & EPOLLOUT)
-                {
-                    if (!pSocket->OnWritable())
-                    {
-                        LOCK_SDK_LOG
-                        DEBUG_SDK << "error send. task fd = " << pSocket->m_localSock;
-                        UNLOCK_SDK_LOG
-                        pSocket->OnError();
-                    }
-                }
-                m_events[i].events = 0;
+                DEBUG_SDK << "error fd = " << pSocket->m_localSock << ", reason " << errno;
+                pSocket->OnError();
             }
+
+            if (m_events[i].events & (EPOLLIN | EPOLLPRI))
+            {
+                if (!pSocket->OnReadable())
+                {
+                    DEBUG_SDK << "error4 read. task fd = " << pSocket->m_localSock << ", errno " << errno;
+                    pSocket->OnError();
+                }
+            }
+            
+            if (m_events[i].events & EPOLLOUT)
+            {
+                if (!pSocket->OnWritable())
+                {
+                    DEBUG_SDK << "error send. task fd = " << pSocket->m_localSock << ", errno " << errno;
+                    pSocket->OnError();
+                }
+            }
+            UNLOCK_SDK_LOG
         }
 #else
         DWORD  bytes = 0;
@@ -590,13 +589,6 @@ bool NetThread::Shutdown()
     }
 
     return TRUE == ret;
-}
-
-int NetThread::GetNumOfCPU()
-{
-    SYSTEM_INFO    si;
-    GetSystemInfo(&si);
-    return  si.dwNumberOfProcessors;
 }
 
 #endif

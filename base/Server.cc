@@ -4,7 +4,6 @@
 #include "Server.h"
 #include "StreamSocket.h"
 #include "ListenSocket.h"
-#include "ClientSocket.h"
 #include "Log/Logger.h"
 #include "NetThreadPool.h"
 
@@ -86,13 +85,6 @@ bool Server::_Bind(int port)
 #endif
 }
 
-bool Server::_Connect(const char* ip, int port)
-{
-    SharedPtr<ClientSocket> pClient(new ClientSocket);
-
-    return  pClient.Get() && pClient->Connect(ip, port);
-}
-
 void Server::MainLoop()
 {
 #if defined(__gnu_linux__)
@@ -128,14 +120,26 @@ void Server::MainLoop()
 #endif
 
     ::srand(static_cast<unsigned int>(time(NULL)));
-
-    if (_Init())
+    
+    // TODO : set the number of thread 
+    if (NetThreadPool::Instance().PrepareThreads(GetNumOfCPU()) &&
+        _Init() &&
+        NetThreadPool::Instance().StartAllThreads() &&
+        LogManager::Instance().StartLog())
     {
+#if !defined(__gnu_linux__)
+        if (!Server::_StartListen())
+        {
+            m_bTerminate = true;
+        }
+
+#endif
         while (!m_bTerminate)
         {
             _RunLogic();
         }
     }
+
     _Recycle();
 
 #if !defined(__gnu_linux__)
@@ -151,9 +155,16 @@ void  Server::NewConnection(SOCKET connfd)
 
     SharedPtr<StreamSocket>  pNewTask = _OnNewConnection(connfd);
     
-    if (pNewTask.Get() == NULL)
+    if (!pNewTask)
         return;
-    
+
+#if !defined(__gnu_linux__)
+    // post IOCP recv request
+    if (pNewTask->RecvBufSize() == 0)
+        pNewTask->SetRecvBufSize(DEFAULT_BUFFER_SIZE);
+#endif
+
     if (NetThreadPool::Instance().AddSocket(pNewTask))
         m_tasks.AddTask(pNewTask);
 }
+

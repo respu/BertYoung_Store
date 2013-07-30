@@ -20,6 +20,8 @@ enum IORequestType
 
 #if defined(__gnu_linux__)
     #include <stdint.h>
+    #include <unistd.h>
+    #include <arpa/inet.h>
     
     typedef int HANDLE;
     #define INVALID_HANDLE_VALUE   (-1)
@@ -29,6 +31,7 @@ enum IORequestType
     #define SOCKET_ERROR    (-1)
 #else
     #include <Windows.h>
+    #include <Winsock2.h>
     typedef  __int8   int8_t;
     typedef  __int16  int16_t;
     typedef  __int32  int32_t;
@@ -76,6 +79,110 @@ enum IORequestType
     };
 
 #endif
+
+template <typename T>
+inline T Host2Net(T  data)
+{
+    return data;
+}
+
+template <>
+inline short Host2Net(short data)
+{
+    return htons(data);
+}
+
+template <>
+inline unsigned short Host2Net(unsigned short data)
+{
+    return htons(data);
+}
+
+template <>
+inline int Host2Net(int data)
+{
+    return htonl(data);
+}
+
+template <>
+inline unsigned int Host2Net(unsigned int data)
+{
+    return htonl(data);
+}
+
+
+template <>
+inline long long Host2Net(long long  data)
+{
+    return (static_cast<long long>(htonl(data & 0xFFFFFFFF)) << 32) | htonl(data >> 32);
+}
+
+template <>
+inline unsigned long long Host2Net(unsigned long long data)
+{
+    return (static_cast<unsigned long long>(htonl(data & 0xFFFFFFFF)) << 32) | htonl(data >> 32);
+}
+
+
+
+template <typename T>
+inline T  Net2Host(T data)
+{
+    return data;
+}
+
+
+template <>
+inline short  Net2Host(short data)
+{
+    return ntohs(data);
+}
+
+
+template <>
+inline unsigned short  Net2Host(unsigned short  data)
+{
+    return ntohs(data);
+}
+
+
+template <>
+inline int Net2Host(int data)
+{
+    return ntohl(data);
+}
+
+
+template <>
+inline unsigned int Net2Host(unsigned int data)
+{
+    return  ntohl(data);
+}
+
+
+template <>
+inline long long Net2Host(long long data)
+{
+    return (static_cast<long long>(ntohl(data & 0xFFFFFFFF)) << 32) | ntohl(data >> 32);
+}
+
+
+template <>
+inline unsigned long long Net2Host(unsigned long long data)
+{
+    return (static_cast<unsigned long long>(ntohl(data & 0xFFFFFFFF)) << 32) | ntohl(data >> 32);
+}
+
+inline int GetNumOfCPU()
+{
+#if defined(__gnu_linux__)
+    return  sysconf(_SC_NPROCESSORS_ONLN);
+#else
+    SYSTEM_INFO    si;
+    GetSystemInfo(&si);
+    return  si.dwNumberOfProcessors;
+#endif
+}
 
 #endif
 

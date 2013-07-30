@@ -27,7 +27,6 @@ protected:
     virtual void _Recycle() ;
     virtual bool _Init() = 0;
     bool _Bind(int port);
-    bool _Connect(const char* ip, int port);
     Server();
     
 public:

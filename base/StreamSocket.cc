@@ -175,14 +175,24 @@ int StreamSocket::Recv()
     int ret = 0;
 
 #if defined(__gnu_linux__)
-    if (0 == m_recvBuf.SizeForWrite())
+    if (0 == RecvBufSize())
     {
-        return 0;
+        SetRecvBufSize(DEFAULT_BUFFER_SIZE); // First recv data, allocate buffer
+        LOCK_SDK_LOG
+        DEBUG_SDK << "EXPAND recv buffer, capacity " << RecvBufSize();
+        UNLOCK_SDK_LOG
     }
     
-    BufferSequence buffers;
+    BufferSequence  buffers;
     m_recvBuf.GetSpace(buffers);
-    assert(buffers.count != 0);
+    if (buffers.count == 0)
+    {
+        LOCK_SDK_LOG
+        DEBUG_SDK << "recv buffer is full ";
+        UNLOCK_SDK_LOG
+        return 0;
+    }
+
     ret = ::readv(m_localSock, buffers.buffers, buffers.count);
     if (ret == ERRORSOCKET && (EAGAIN == errno || EWOULDBLOCK == errno))
         return 0;
@@ -383,7 +393,7 @@ bool StreamSocket::SendPacket(const char* pData, int nBytes)
 
     while (!m_sendList.empty())
     {
-        Msg &msg = m_sendList.front();
+        Msg& msg = m_sendList.front();
         if (!m_sendBuf.PushData(msg.msg, msg.len))
         {
             Msg tmp(nBytes, pData);
@@ -396,9 +406,27 @@ bool StreamSocket::SendPacket(const char* pData, int nBytes)
 
     if (!m_sendBuf.PushData(pData, nBytes))
     {
+        if (SendBufSize() == 0)
+        {
+            SetSendBufSize(DEFAULT_BUFFER_SIZE);
+            LOCK_SDK_LOG
+            DEBUG_SDK << "expand send buf has space " << m_sendBuf.SizeForWrite();
+            UNLOCK_SDK_LOG
+            if (!m_sendBuf.PushData(pData, nBytes))
+            {
+                LOCK_SDK_LOG
+                DEBUG_SDK << "can not send too big packet, bytes = " << nBytes
+                          << ", but send buf only has space " << m_sendBuf.SizeForWrite();
+                UNLOCK_SDK_LOG
+            }
+            
+            // don't care send result, drop too big packet whatever.
+            return  true;
+        }
+
         LOCK_SDK_LOG
-        DEBUG_SDK << "Can not send packet because send buffer overflow, bytes = " << nBytes
-                  << ", but send buf only has space " << m_sendBuf.SizeForWrite();
+        DEBUG_SDK << "can not push packet, bytes = " << nBytes
+                  << ", send buf only has space " << m_sendBuf.SizeForWrite();
         UNLOCK_SDK_LOG
 
         Msg tmp(nBytes, pData);
@@ -430,7 +458,7 @@ bool  StreamSocket::OnReadable()
     if (nBytes < 0)
     {
         LOCK_SDK_LOG
-        DEBUG_SDK << "socket " << m_localSock <<", OnRead error , nBytes = " << nBytes;
+        DEBUG_SDK << "socket " << m_localSock <<", OnRead error , nBytes = " << nBytes << ", errno " << errno;
         UNLOCK_SDK_LOG
         return false;
     }
@@ -514,7 +542,9 @@ bool StreamSocket::Send()
     BufferSequence buffers;
     m_sendBuf.GetDatum(buffers);
     if (0 == buffers.count)
+    {
         return true;
+    }
 
     nBytes = this->_Send(buffers);
     if (nBytes > 0)

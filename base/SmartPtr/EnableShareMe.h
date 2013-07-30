@@ -6,9 +6,11 @@
 template <typename T>
 class EnableShareMe
 {
-public:
+protected:
     EnableShareMe() {}
     EnableShareMe(const EnableShareMe& ) { }
+
+public:
     EnableShareMe& operator= (const EnableShareMe& ) { return *this; }
 
     template <typename U>
@@ -22,10 +24,12 @@ public:
 
     SharedPtr<T>     ShareMe()
     {
+#if 0
         if (m_weak.Expired())
         {
             return SharedPtr<T>();
         }
+#endif
 
         return SharedPtr<T>(m_weak);
     }

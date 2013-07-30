@@ -1,10 +1,24 @@
 #ifndef BERT_SHAREPTR_H
 #define BERT_SHAREPTR_H
 
-#ifdef SMART_PTR
-#include <iostream>
-#endif
 #include "./CounterImpl.h"
+
+namespace {
+
+// support SharedPtr<void>
+template <typename T>
+struct TypeTrait
+{
+    typedef T& reference;
+};
+
+template <>
+struct TypeTrait<void>
+{
+    typedef void reference;
+};
+
+}
 
 template <typename T>
 class SharedPtr;
@@ -19,7 +33,7 @@ inline void InitShareMe(...)
 {
 }
 
-template <typename T, typename U> // 要保证 U-->T是合法的
+template <typename T, typename U> // assure U-->T is legal
 inline void InitShareMe(EnableShareMe<T>* pMe, SharedPtr<U>* pShare)
 {
     if (pMe)    pMe->AcceptOwner(pShare);
@@ -41,11 +55,7 @@ public:
 
     ~SharedPtr()
     {
-#ifdef SMART_PTR
-        Print();
-#endif
-        if (m_cnt)
-            m_cnt->DecShareCnt();
+        if (m_cnt)      m_cnt->DecShareCnt();
     }
 
     explicit SharedPtr(T* ptr) : m_cnt(0), m_ptr(ptr)
@@ -67,37 +77,30 @@ public:
         }
     }
 
+    // alias ctor
     template <typename U>
-    SharedPtr(const SharedPtr<U>& other)
+    SharedPtr(const SharedPtr<U>& other, T* ptr) : m_ptr(ptr)
     {
-        CounterBase* tmp = other.m_cnt;
-        if (tmp)
+        if (other.m_cnt)
         {
-            tmp->AddShareCnt();
-            m_cnt = tmp;
-            m_ptr = static_cast<T* >(other.m_ptr);
+            other.m_cnt->AddShareCnt();
+            m_cnt = other.m_cnt;
         }
         else
         {
             m_cnt = 0;
-            m_ptr = 0;
         }
     }
 
-    SharedPtr(const SharedPtr& other)
+    template <typename U>
+    SharedPtr(const SharedPtr<U>& other) : m_cnt(other.m_cnt), m_ptr(static_cast<T* >(other.m_ptr))
     {
-        CounterBase* tmp = other.m_cnt;
-        if (tmp)
-        {
-            tmp->AddShareCnt();
-            m_cnt = tmp;
-            m_ptr = other.m_ptr;
-        }
-        else
-        {
-            m_cnt = 0;
-            m_ptr = 0;
-        }
+        if (m_cnt)      m_cnt->AddShareCnt();
+    }
+
+    SharedPtr(const SharedPtr& other) : m_cnt(other.m_cnt), m_ptr(other.m_ptr)
+    {
+        if (m_cnt)      m_cnt->AddShareCnt();
     }
 
     SharedPtr(const WeakPtr<T>& other)
@@ -117,19 +120,15 @@ public:
   
     SharedPtr& operator=(const SharedPtr& other)
     {
-        if (this == &other || m_ptr == other.m_ptr)
+        if (this == &other)
             return *this;
-
-        CounterBase* tmp = other.m_cnt;
-        if (tmp)
-        {
-            tmp->AddShareCnt();
-        }
 
         Reset();
 
-        m_cnt = tmp;
+        m_cnt = other.m_cnt;
         m_ptr = other.m_ptr;
+
+        if (m_cnt)    m_cnt->AddShareCnt();
 
         return *this;
     }
@@ -155,9 +154,15 @@ public:
         }
     }
 
-    T& operator*() const
+    typename TypeTrait<T>::reference operator*() const
     {
         return *m_ptr;
+    }
+
+    typedef T*  (SharedPtr<T>::* bool_type)() const;
+    operator bool_type() const
+    {
+        return m_ptr == 0 ? 0 : &SharedPtr<T>::Get;
     }
 
     T* operator->() const
@@ -177,15 +182,10 @@ public:
         return 0;
     }
 
-#ifdef SMART_PTR
-    void Print()
-    {        
-        std::cout << "|---------------\n";
-        std::cout << "|Share cnt " << (m_cnt ? m_cnt->UseCount() : 0) << std::endl;
-        std::cout << "|" << (m_ptr ? m_ptr : 0) << std::endl;
-        std::cout << "|---------------\n";
+    bool Unique() const
+    {
+        return UseCount() == 1;
     }
-#endif
 
 private:
     CounterBase* m_cnt;

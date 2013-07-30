@@ -77,7 +77,6 @@ public:
     };
     static bool CreateIOCP();
     static bool Shutdown();
-    static int  GetNumOfCPU();
 #endif
 };
 

@@ -13,114 +13,25 @@
 
 #if defined(__gnu_linux__)
     #include <sys/uio.h>
-    #include <arpa/inet.h>
 #else
     #include <Winsock2.h>
 #endif
 
-template <typename T>
-inline T Host2Net(T  data)
-{
-    return data;
-}
-
-template <>
-inline short Host2Net(short data)
-{
-    return htons(data);
-}
-
-template <>
-inline unsigned short Host2Net(unsigned short data)
-{
-    return htons(data);
-}
-
-template <>
-inline int Host2Net(int data)
-{
-    return htonl(data);
-}
-
-template <>
-inline unsigned int Host2Net(unsigned int data)
-{
-    return htonl(data);
-}
-
-
-template <>
-inline long long Host2Net(long long  data)
-{
-    return (static_cast<long long>(htonl(data & 0xFFFFFFFF)) << 32) | htonl(data >> 32);
-}
-
-template <>
-inline unsigned long long Host2Net(unsigned long long data)
-{
-    return (static_cast<unsigned long long>(htonl(data & 0xFFFFFFFF)) << 32) | htonl(data >> 32);
-}
-
-
-
-template <typename T>
-inline T  Net2Host(T data)
-{
-    return data;
-}
-
-
-template <>
-inline short  Net2Host(short data)
-{
-    return ntohs(data);
-}
-
-
-template <>
-inline unsigned short  Net2Host(unsigned short  data)
-{
-    return ntohs(data);
-}
-
-
-template <>
-inline int Net2Host(int data)
-{
-    return ntohl(data);
-}
-
-
-template <>
-inline unsigned int Net2Host(unsigned int data)
-{
-    return  ntohl(data);
-}
-
-
-template <>
-inline long long Net2Host(long long data)
-{
-    return (static_cast<long long>(ntohl(data & 0xFFFFFFFF)) << 32) | ntohl(data >> 32);
-}
-
-
-template <>
-inline unsigned long long Net2Host(unsigned long long data)
-{
-    return (static_cast<unsigned long long>(ntohl(data & 0xFFFFFFFF)) << 32) | ntohl(data >> 32);
-}
-
 
 struct BufferSequence
 {
+    BufferSequence() : count(0)
+    {
+    }
+
+    static const int MAX_BUFS = 16;
 #if defined(__gnu_linux__)
-    iovec   buffers[2];
+    iovec   buffers[MAX_BUFS];
     #define IOVEC_BUF    iov_base
     #define IOVEC_LEN    iov_len
 
 #else
-    WSABUF  buffers[2];
+    WSABUF  buffers[MAX_BUFS];
     #define IOVEC_BUF    buf
     #define IOVEC_LEN    len
 
@@ -128,7 +39,7 @@ struct BufferSequence
 
     int     count;
 
-    int TotalBytes() const
+    int     TotalBytes() const
     {
         int nBytes = 0;
         for (int i = 0; i < count; ++ i)
@@ -138,11 +49,14 @@ struct BufferSequence
     }
 };
 
-static const int  DEFAULT_BUFFER_SIZE = 256 * 1024;
+static const int  DEFAULT_BUFFER_SIZE = 128 * 1024;
 
 inline int RoundUp2Power(int size)
 {
-    assert (size > 0 && "Size overflow or underflow");
+    assert (size >= 0 && "Size underflow");
+
+    if (0 == size)  return 0;
+
     int    roundSize = 1;
     while (roundSize < size)
         roundSize <<= 1;
@@ -156,7 +70,7 @@ class  CircularBuffer
 {
 public:
     // Constructor  to be specialized
-    explicit CircularBuffer(int maxSize = DEFAULT_BUFFER_SIZE) : m_maxSize(maxSize),
+    explicit CircularBuffer(int size = 0) : m_maxSize(size),
     m_readPos(0),
     m_writePos(0),
     m_owned(false)
@@ -194,7 +108,8 @@ public:
 
     void Clear() {  AtomicSet(&m_readPos, m_writePos);  }
 
-    int Capacity() const { return m_maxSize; }
+    int  Capacity() const { return m_maxSize; }
+    void InitCapacity(int size);
 
     template <typename T>
     CircularBuffer& operator<< (const T& data);
@@ -313,12 +228,14 @@ void CircularBuffer<BUFFER>::GetDatum(BufferSequence& buffer, int maxSize, int o
 template <typename BUFFER>
 void CircularBuffer<BUFFER>::GetSpace(BufferSequence& buffer, int offset)
 {
+    if (m_maxSize <= 0)
+        return;
+
     assert(m_readPos >= 0 && m_readPos < m_maxSize);
     assert(m_writePos >= 0 && m_writePos < m_maxSize);
 
     if (SizeForWrite() <= offset + 1)
     {
-        buffer.count = 0;
         return;
     }
 
@@ -468,11 +385,20 @@ inline void CircularBuffer<BUFFER>::AdjustReadPtr(int size)
 }
 
 template <typename BUFFER>
+inline void CircularBuffer<BUFFER>::InitCapacity(int size)
+{
+    assert (size > 0 && size <= 1 * 1024 * 1024 * 1024);
+
+    m_maxSize = RoundUp2Power(size);
+    m_buffer.resize(m_maxSize);
+    std::vector<char>(m_buffer).swap(m_buffer);
+}
+
+template <typename BUFFER>
 template <typename T>
 inline CircularBuffer<BUFFER>& CircularBuffer<BUFFER>::operator<< (const T& data )
 {
-    T netData = Host2Net(data);
-    if (!PushData(&netData, sizeof netData))
+    if (!PushData(&data, sizeof data))
         ;//ERR << "Please modify the DEFAULT_BUFFER_SIZE";
 
     return *this;
@@ -485,7 +411,6 @@ inline CircularBuffer<BUFFER> & CircularBuffer<BUFFER>::operator>> (T& data )
     if (!PeekData(&data, sizeof data))
         ;//ERR << "Not enough data in m_buffer";
 
-    data = Net2Host(data);
     return *this;
 }
 
@@ -842,3 +767,4 @@ inline AttachedBuffer::~CircularBuffer()
 
 
 #endif
+

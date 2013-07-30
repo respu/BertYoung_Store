@@ -64,6 +64,11 @@ public:
     bool  IsIOPending()     { return IsRecvPending() || IsSendPending();  }
 #endif
 
+    int   RecvBufSize() const {  return  m_recvBuf.Capacity(); }
+    int   SendBufSize() const {  return  m_sendBuf.Capacity(); }
+    void  SetRecvBufSize(int size) {  m_recvBuf.InitCapacity(size); }
+    void  SetSendBufSize(int size) {  m_sendBuf.InitCapacity(size); }
+
 private:
     int    _Send(const BufferSequence& buffers);
     bool   _SendFully(BufferSequence& buffers);

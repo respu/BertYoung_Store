@@ -14,11 +14,10 @@ bool ServerTask::SendMsg()
     ++ seq;
     msgLen = snprintf(msg + sizeof(BODY_LENGTH_T), sizeof msg - sizeof(BODY_LENGTH_T), "hello server%d", seq);
     *(BODY_LENGTH_T*)msg = Host2Net(msgLen);
+
     SendPacket(msg, sizeof(BODY_LENGTH_T));
     Thread::YieldCPU();
-    SendPacket(msg + sizeof(BODY_LENGTH_T), msgLen);
-
- //   return SendPacket(msg, msgLen + sizeof(BODY_LENGTH_T));
+    return SendPacket(msg + sizeof(BODY_LENGTH_T), msgLen);
 }
 
 HEAD_LENGTH_T ServerTask::_HandleHead(AttachedBuffer& buf, BODY_LENGTH_T* bodyLen)
@@ -26,6 +25,7 @@ HEAD_LENGTH_T ServerTask::_HandleHead(AttachedBuffer& buf, BODY_LENGTH_T* bodyLe
     if (buf.SizeForRead() >= sizeof(*bodyLen))
     {
         buf >> *bodyLen;
+        *bodyLen = Net2Host(*bodyLen);
         return sizeof(*bodyLen);
     }
 
