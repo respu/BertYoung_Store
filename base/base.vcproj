@@ -155,10 +155,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\CSVParser.cc"
-				>
-			</File>
-			<File
 				RelativePath=".\ListenSocket.cc"
 				>
 			</File>
@@ -202,10 +198,6 @@
 			</File>
 			<File
 				RelativePath=".\CommonDef.h"
-				>
-			</File>
-			<File
-				RelativePath=".\CSVParser.h"
 				>
 			</File>
 			<File
